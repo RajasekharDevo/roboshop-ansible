@@ -1,0 +1,39 @@
+#if [ "$ schema_setup" == "mongo" ] ; then
+#func_print_head "Copy MongoDB repo"
+#cp ${script_path}/mongo.repo /etc/yum.repos.d/mongo.repo &>>$log_file
+#func_stat_check $?
+#
+#func_print_head Install  "MongoDB Client"
+#dnf install mongodb-org-shell -y &>>$log_file
+#func_stat_check $?
+#
+#func_print_head "Load Schema "
+#mongo --host mongodb-dev.rajasekhar72.store </app/schema/${component} &>>$log_file
+#func_stat_check $?
+#fi
+#if [ "$ schema_setup" == "mysql" ]; then
+#func_print_head  "INSTALL MYSQL client"
+#dnf install mysql -y &>>$log_file
+#func_stat_check $?
+#
+#func_print_head  "Load Schema"
+#mysql -h mysql-dev.rajasekhar72.store  -uroot -p$mysql_root_password < /app/schema/${component}.sql &>>$log_file
+#func_stat_check $?
+#fi
+
+- name: Load MongoDB Schema
+  when: schema_setup "mongo"
+  block:
+    -
+    - name: Copy MongoDB repo file
+      ansible.builtin.copy:
+        src: mongo.repo
+        dest: /etc/yum.repos.d/mongo.repo
+
+    - name: Install MongoDB client
+      ansible.builtin.yum:
+        name: mongodb-org-shell
+        state: installed
+
+- name: Load Schema
+  ansible.builtin.shell: mongo-host {{ lookup('aws_ssm', 'dev.catalogue.mongo_endpoint', region='us-east-1' ) }} < /app/schema/${component}.sql
